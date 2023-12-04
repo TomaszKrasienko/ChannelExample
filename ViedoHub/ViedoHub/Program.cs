@@ -1,4 +1,5 @@
-﻿using ViedoHub.Requests;
+﻿using ViedoHub.Channels;
+using ViedoHub.Requests;
 using ViedoHub.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,7 +9,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<VideoProcessor>();
-
+builder.Services.AddSingleton<FullHdVideoChannel>();
+builder.Services.AddSingleton<UltraHdVideoChannel>();  
+builder.Services.AddHostedService<FullHdVideoProcessor>();
+builder.Services.AddHostedService<UltraHdVideoProcessor>();
+ 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -22,10 +27,11 @@ app.UseHttpsRedirection();
 
 app.MapGet("/", () => "Video hub");
 
-app.MapPost("/videos", async (ProcessVideo request, VideoProcessor processor) =>
+app.MapPost("/videos", async (ProcessVideo request, FullHdVideoChannel fullHdVideoChannel, UltraHdVideoChannel ultraHdVideoChannel) =>
 {
-    await processor.ProcessAsync(request);
-    return Results.Ok();
+    await fullHdVideoChannel.Channel.PublishAsync(request);
+    await ultraHdVideoChannel.Channel.PublishAsync(request);
+    return Results.Accepted();
 });
 
 app.Run();
